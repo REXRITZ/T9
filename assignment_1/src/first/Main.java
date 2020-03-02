@@ -11,7 +11,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
 
-        String[][] optab = new String[17][3];
+        String[][] optab = new String[18][3];
         String[][] assembler = new String[50][4];
         String[][] mc = new String[50][4];
         HashMap<String,String> look = new HashMap<>();
@@ -19,36 +19,37 @@ public class Main {
         if(!f1.exists())
             f1.createNewFile();
 
-        createoptab(optab,look);
+        createoptab(optab);
         String reg[][] = createregister();
         String cc[][] = createcc();
 
         int i = createassemblercode(assembler,optab,reg,cc,f1);
         lc(i-1,assembler,mc);
-        for(int j=0;j<i;++j)
-            System.out.println(mc[j][0]);
-        converttomachine(i-1,assembler,mc);
+//        for(int j=0;j<i;++j)
+//            System.out.println(mc[j][0]);
+        converttomachine(i-1,assembler,mc,optab,reg,cc);
+        for(int j=0;j<i-1;++j) {
+            for (int m = 0; m < 4; ++m)
+                System.out.print(mc[j][m] + " ");
+            System.out.println();
+        }
     }
 
-    private static void createoptab(String [][]optab,HashMap<String,String>look) throws  IOException{
+    private static void createoptab(String [][]optab) throws  IOException{
         File f2 = new File("mnen.txt");
         FileReader f = new FileReader(f2);
         BufferedReader bb = new BufferedReader(f);
         StringTokenizer st;
         int i=0,j;
         for(String line = bb.readLine(); line != null; line = bb.readLine()) {
+            //System.out.println(line);
             j=0;
             st = new StringTokenizer(line, " ");
             String a="",b="";
             while(st.hasMoreTokens()) {
                 optab[i][j] = st.nextToken();
-                if(j==0)
-                    a=st.nextToken();
-                if(j==2)
-                    b=st.nextToken();
                 j++;
             }
-            look.put(a,b);
             i++;
 
         }
@@ -158,7 +159,20 @@ public class Main {
         return i;
     }
 
-    private static void converttomachine(int i, String[][] assembler, String[][] mc) {
+    private static void converttomachine(int i, String[][] assembler, String[][] mc,String[][] optab,String[][] reg, String[][] cc) {
+
+        for(int j=0;j<i;++j) {
+            int t = findmnemonic(assembler[j][1],optab);
+            if(t!= -1)
+                mc[j][1] = optab[t][2] + "(" + optab[t][1] + ")";
+            int x = isregister(assembler[j][2],reg);
+            if(x != -1)
+                mc[j][2] = reg[x][1];
+            int y = iscc(assembler[j][2],cc);
+            if(y != -1)
+                mc[j][2] = cc[y][1];
+            mc[j][3] = assembler[j][3];
+        }
 
     }
 
