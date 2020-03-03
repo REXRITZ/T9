@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.StringTokenizer;
 
@@ -14,7 +15,8 @@ public class Main {
         String[][] optab = new String[18][3];
         String[][] assembler = new String[50][4];
         String[][] mc = new String[50][4];
-        HashMap<String,String> look = new HashMap<>();
+        String[][] symbol = new String [20][3];
+        ArrayList<ArrayList<String>>a = new ArrayList<ArrayList<String>>();
         File f1 = new File("input.txt");
         if(!f1.exists())
             f1.createNewFile();
@@ -23,16 +25,16 @@ public class Main {
         String reg[][] = createregister();
         String cc[][] = createcc();
 
-        int i = createassemblercode(assembler,optab,reg,cc,f1);
+        int i = createassemblercode(assembler,optab,reg,cc,f1,symbol);
         lc(i-1,assembler,mc);
-//        for(int j=0;j<i;++j)
-//            System.out.println(mc[j][0]);
-        converttomachine(i-1,assembler,mc,optab,reg,cc);
+        generatesymboltable(i-1,mc,assembler,symbol);
+        converttomachine(i-1,assembler,mc,optab,reg,cc,symbol);
         for(int j=0;j<i-1;++j) {
             for (int m = 0; m < 4; ++m)
                 System.out.print(mc[j][m] + " ");
             System.out.println();
         }
+
     }
 
     private static void createoptab(String [][]optab) throws  IOException{
@@ -126,7 +128,7 @@ public class Main {
         mc[j][0] = "null";
     }
 
-    private static int createassemblercode(String[][] assembler, String[][] optab, String[][] reg, String[][] cc, File f1) throws IOException{
+    private static int createassemblercode(String[][] assembler, String[][] optab, String[][] reg, String[][] cc, File f1,String[][] symbol) throws IOException{
         FileReader fr = new FileReader(f1);
         BufferedReader br = new BufferedReader(fr);
         StringTokenizer st;
@@ -139,17 +141,27 @@ public class Main {
                 String t = st.nextToken();
                 int x;
                 x = findmnemonic(t,optab);
-                if(x != -1)
+                if(x != -1) {
                     assembler[i][1] = optab[x][0];
-                if(j==0 && x == -1)
+                    j++;
+                    continue;
+                }
+                if(j==0 && x == -1) {
                     assembler[i][0] = t;
+                    symboltable(t,symbol);
+                }
                 if(j >= 1){
                     x = isregister(t,reg);
                     int y = iscc(t,cc);
-                    if(x != -1 || y != -1)
-                        assembler[i][2] = (x != -1)?reg[x][0]:cc[y][0];
+                    if(x != -1 || y != -1) {
+                        assembler[i][2] = (x != -1) ? reg[x][0] : cc[y][0];
+                        j++;
+                        continue;
+                    }
                     else {
                         assembler[i][3] = t;
+                        if(i > 0)
+                            symboltable(t,symbol);
                     }
                 }
                 j++;
@@ -159,7 +171,7 @@ public class Main {
         return i;
     }
 
-    private static void converttomachine(int i, String[][] assembler, String[][] mc,String[][] optab,String[][] reg, String[][] cc) {
+    private static void converttomachine(int i, String[][] assembler, String[][] mc,String[][] optab,String[][] reg, String[][] cc, String[][] symbol) {
 
         for(int j=0;j<i;++j) {
             int t = findmnemonic(assembler[j][1],optab);
@@ -171,9 +183,50 @@ public class Main {
             int y = iscc(assembler[j][2],cc);
             if(y != -1)
                 mc[j][2] = cc[y][1];
-            mc[j][3] = assembler[j][3];
+            for(int k=0;k<symbol.length;++k) {
+                if(symbol[k][0] == null || assembler[j][3] == null)
+                    break;
+                if(assembler[j][3].equals(symbol[k][0])) {
+                    mc[j][3] = symbol[k][1];
+                    break;
+                }
+            }
+            if(assembler[j][1].equals("STOP"))
+                break;
         }
 
+
+    }
+
+    private static void symboltable(String s, String[][] symbol) {
+        int i;
+        for(i=0;i<symbol.length;++i) {
+            String temp = symbol[i][0];
+            if(temp != null && temp.matches("[0-9]+") && temp.length() >= 1)
+                break;
+            if(temp == null) {
+                symbol[i][0] = s;
+                break;
+            }
+            if(s.equals(symbol[i][0])) {
+                break;
+            }
+        }
+    }
+
+    private static void generatesymboltable(int i, String[][] mc, String[][] assembler,String[][] symbol) {
+        for(int j=0;j<i;++j) {
+            if(assembler[j][0] == null)
+                continue;
+            else {
+                for(int k=0;k<symbol.length;++k) {
+                    if(assembler[j][0].equals(symbol[k][0])) {
+                        symbol[k][1] = mc[j][0];
+                        break;
+                    }
+                }
+            }
+        }
     }
 
 }
